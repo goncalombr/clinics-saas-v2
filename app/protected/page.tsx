@@ -1,43 +1,57 @@
-import { redirect } from "next/navigation";
+"use client";
 
-import { createClient } from "@/lib/supabase/server";
+import { useState } from "react";
 import { InfoIcon } from "lucide-react";
-import { FetchDataSteps } from "@/components/tutorial/fetch-data-steps";
-import { Suspense } from "react";
-
-async function UserDetails() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-
-  if (error || !data?.claims) {
-    redirect("/auth/login");
-  }
-
-  return JSON.stringify(data.claims, null, 2);
-}
 
 export default function ProtectedPage() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function invite() {
+    setLoading(true);
+    setMsg("");
+
+    const res = await fetch("/api/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    if (res.ok) {
+      setMsg("Convite enviado (ver consola)");
+      setEmail("");
+    } else {
+      const t = await res.text();
+      setMsg("Erro: " + t);
+    }
+
+    setLoading(false);
+  }
+
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
-        </div>
+    <div className="p-6 flex flex-col gap-6">
+      <div className="bg-accent text-sm p-3 px-5 rounded-md flex gap-3 items-center">
+        <InfoIcon size="16" /> Área protegida
       </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          <Suspense>
-            <UserDetails />
-          </Suspense>
-        </pre>
+
+      <div className="flex gap-2 max-w-sm">
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email do utilizador"
+          className="border p-2 flex-1"
+        />
+        <button
+          onClick={invite}
+          disabled={loading}
+          className="border p-2"
+        >
+          {loading ? "..." : "Convidar"}
+        </button>
       </div>
-      <div>
-        <h2 className="font-bold text-2xl mb-4">Next steps</h2>
-        <FetchDataSteps />
-      </div>
+
+      {msg && <div className="text-sm">{msg}</div>}
     </div>
   );
 }
